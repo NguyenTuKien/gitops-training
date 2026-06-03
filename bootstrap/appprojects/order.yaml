@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: order
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  description: Project order (branch project-order)
+  sourceRepos:
+    - https://gitlab.viettel.vn/devops/gitops-training.git
+    - harbor.viettel.vn/charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "order-*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

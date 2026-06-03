@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: payment
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  description: Project payment (branch project-payment)
+  sourceRepos:
+    - https://gitlab.viettel.vn/devops/gitops-training.git
+    - harbor.viettel.vn/charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "payment-*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

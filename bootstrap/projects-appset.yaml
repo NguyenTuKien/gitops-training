@@ -1,0 +1,64 @@
+# Sinh 1 Application cho mỗi (project, app, env).
+#   Trục 1 (list)  : project = branch     -> branch-based
+#   Trục 2 (git)   : env     = directory  -> directory-based
+# Mỗi Application là multi-source:
+#   source[0] = OCI Helm chart (base đã release ở Harbor)
+#   source[1] = repo này (branch của project) cung cấp values theo env ($values)
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: all-projects
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          # --- Trục project (branch-based) ---
+          - list:
+              elements:
+                - project: payment
+                  branch: project-payment
+                - project: order
+                  branch: project-order
+          # --- Trục env (directory-based): đọc mỗi config.yaml để biết chart + version ---
+          - git:
+              repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+              revision: '{{.branch}}'
+              files:
+                - path: "apps/*/overlays/*/config.yaml"
+  template:
+    metadata:
+      # path.segments[1] = tên app ; path.basename = tên env
+      name: '{{.project}}-{{ index .path.segments 1 }}-{{.path.basename}}'
+      labels:
+        project: '{{.project}}'
+        app: '{{ index .path.segments 1 }}'
+        env: '{{.path.basename}}'
+    spec:
+      project: '{{.project}}'
+      sources:
+        # base = Helm chart OCI đã release (PIN version từ config.yaml)
+        - repoURL: harbor.viettel.vn/charts
+          chart: '{{.chart}}'
+          targetRevision: '{{.version}}'
+          helm:
+            valueFiles:
+              - '$values/{{.path.path}}/values.yaml'
+        # values theo env, nằm trong branch của project
+        - repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+          targetRevision: '{{.branch}}'
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.project}}-{{.path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

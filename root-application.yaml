@@ -1,0 +1,25 @@
+# App-of-Apps gốc. Apply TAY 1 lần duy nhất:
+#   kubectl apply -f root-application.yaml
+# Sau đó toàn bộ chain (AppProject, sealed-secrets, ApplicationSet) là GitOps.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+    targetRevision: main
+    path: bootstrap
+    directory:
+      recurse: true            # quét cả bootstrap/appprojects/
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
