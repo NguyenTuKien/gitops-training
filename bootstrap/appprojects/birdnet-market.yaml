@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Project birdnet-market (branch project-birdnet-market)
+  description: Project birdnet-market (apps/birdnet-market/)
   sourceRepos:
     # base chart + values cùng nằm trong repo này
     - https://github.com/ongtungduong/gitops-training.git

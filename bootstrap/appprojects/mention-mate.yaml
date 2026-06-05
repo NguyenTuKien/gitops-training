@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Project mention-mate (branch project-mention-mate)
+  description: Project mention-mate (apps/mention-mate/)
   sourceRepos:
     # base chart + values cùng nằm trong repo này
     - https://github.com/ongtungduong/gitops-training.git
