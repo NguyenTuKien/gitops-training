@@ -1,0 +1,35 @@
+{{- $fullname := include "app.fullname" . -}}
+{{- range $name, $c := .Values.components }}
+{{- if and $c.httpRoute $c.httpRoute.enabled }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullname }}-{{ $name }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  # Gateway dùng chung (thường ở namespace khác -> cần ReferenceGrant nếu cross-namespace)
+  parentRefs:
+    - name: {{ $.Values.gateway.name }}
+      namespace: {{ $.Values.gateway.namespace }}
+      {{- with $.Values.gateway.sectionName }}
+      sectionName: {{ . }}
+      {{- end }}
+  {{- with $c.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - matches:
+        {{- range ($c.httpRoute.pathPrefixes | default (list "/")) }}
+        - path:
+            type: PathPrefix
+            value: {{ . | quote }}
+        {{- end }}
+      backendRefs:
+        - name: {{ $fullname }}-{{ $name }}
+          port: {{ required (printf "component %q cần 'port' khi bật httpRoute" $name) $c.port }}
+{{- end }}
+{{- end }}

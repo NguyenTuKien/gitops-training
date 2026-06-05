@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: order
+  name: birdnet-market
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Project order (branch project-order)
+  description: Project birdnet-market (branch project-birdnet-market)
   sourceRepos:
-    - https://gitlab.viettel.vn/devops/gitops-training.git
-    - harbor.viettel.vn/charts
+    # base chart + values cùng nằm trong repo này
+    - https://github.com/ongtungduong/gitops-training.git
   destinations:
     - server: https://kubernetes.default.svc
-      namespace: "order-*"
+      namespace: "birdnet-market-*"
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace

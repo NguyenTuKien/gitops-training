@@ -9,11 +9,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+    repoURL: https://github.com/ongtungduong/gitops-training.git
     targetRevision: main
     path: bootstrap
     directory:
-      recurse: true            # quét cả bootstrap/appprojects/
+      recurse: true            # quét cả bootstrap/appprojects/ và bootstrap/appsets/
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

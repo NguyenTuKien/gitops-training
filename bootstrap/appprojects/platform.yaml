@@ -6,13 +6,15 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Platform components (sealed-secrets, ...)
+  description: Platform components (sealed-secrets, kgateway, ...)
   sourceRepos:
     - https://bitnami-labs.github.io/sealed-secrets
-    - harbor.viettel.vn/charts
+    - cr.kgateway.dev/kgateway-dev/charts
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: kgateway-system
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"

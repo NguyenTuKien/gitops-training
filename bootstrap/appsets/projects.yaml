@@ -1,9 +1,9 @@
 # Sinh 1 Application cho mỗi (project, app, env).
 #   Trục 1 (list)  : project = branch     -> branch-based
 #   Trục 2 (git)   : env     = directory  -> directory-based
-# Mỗi Application là multi-source:
-#   source[0] = OCI Helm chart (base đã release ở Harbor)
-#   source[1] = repo này (branch của project) cung cấp values theo env ($values)
+# Mỗi Application là multi-source, CẢ HAI source đều là repo này:
+#   source[0] = base Helm chart DUY NHẤT (helm-charts/app) trên branch main
+#   source[1] = branch của project, cung cấp values theo env ($values)
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -20,16 +20,16 @@ spec:
           # --- Trục project (branch-based) ---
           - list:
               elements:
-                - project: payment
-                  branch: project-payment
-                - project: order
-                  branch: project-order
-          # --- Trục env (directory-based): đọc mỗi config.yaml để biết chart + version ---
+                - project: mention-mate
+                  branch: project-mention-mate
+                - project: birdnet-market
+                  branch: project-birdnet-market
+          # --- Trục env (directory-based): mỗi folder overlay = 1 env ---
           - git:
-              repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+              repoURL: https://github.com/ongtungduong/gitops-training.git
               revision: '{{.branch}}'
-              files:
-                - path: "apps/*/overlays/*/config.yaml"
+              directories:
+                - path: "apps/*/overlays/*"
   template:
     metadata:
       # path.segments[1] = tên app ; path.basename = tên env
@@ -41,15 +41,15 @@ spec:
     spec:
       project: '{{.project}}'
       sources:
-        # base = Helm chart OCI đã release (PIN version từ config.yaml)
-        - repoURL: harbor.viettel.vn/charts
-          chart: '{{.chart}}'
-          targetRevision: '{{.version}}'
+        # base = chart DUY NHẤT helm-charts/app (không version), luôn lấy từ main
+        - repoURL: https://github.com/ongtungduong/gitops-training.git
+          targetRevision: main
+          path: 'helm-charts/app'
           helm:
             valueFiles:
               - '$values/{{.path.path}}/values.yaml'
         # values theo env, nằm trong branch của project
-        - repoURL: https://gitlab.viettel.vn/devops/gitops-training.git
+        - repoURL: https://github.com/ongtungduong/gitops-training.git
           targetRevision: '{{.branch}}'
           ref: values
       destination:

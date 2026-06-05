@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: payment
+  name: mention-mate
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Project payment (branch project-payment)
+  description: Project mention-mate (branch project-mention-mate)
   sourceRepos:
-    - https://gitlab.viettel.vn/devops/gitops-training.git
-    - harbor.viettel.vn/charts
+    # base chart + values cùng nằm trong repo này
+    - https://github.com/ongtungduong/gitops-training.git
   destinations:
     - server: https://kubernetes.default.svc
-      namespace: "payment-*"
+      namespace: "mention-mate-*"
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
