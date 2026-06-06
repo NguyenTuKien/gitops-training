@@ -1,55 +1,64 @@
 # gitops-training
 
-Lab GitOps trên ArgoCD: **App-of-Apps + ApplicationSet**, multi-source, **1 base Helm chart dùng chung**.
-**Single branch (`main`), directory-based** — project / app / env đều là thư mục.
+Lab GitOps trên ArgoCD: **App-of-Apps + ApplicationSet** nhiều tầng, multi-source, **1 base Helm chart dùng chung**.
+Single branch (`main`), directory-based. Tách **2 tier theo cluster**:
 
-## Cấu trúc
+- **`root-nonproduction`** → quản lý **dev + staging** (apply lên ArgoCD của cluster nonprod)
+- **`root-production`** → quản lý **prod** (apply lên ArgoCD của cluster prod)
+
+> Mỗi cluster có ArgoCD riêng (per-cluster), mọi destination = in-cluster. 2 tier giống hệt nhau,
+> chỉ khác **env filter** (nonproduction = dev+staging, production = prod).
+
+## Phân tầng (mỗi tier)
+
+```
+root-<tier> (App, recurse:false → chỉ đọc 4 file cấp 1 của bootstrap/<tier>)
+├── appprojects   (appset) ──► App/appproject-<proj> ──► AppProject        (wave -2)
+├── platform      (appset) ──► sealed-secrets, kgateway-crds, kgateway     (wave -1)
+├── all-projects  (appset) ──► App/projectset-<proj> ──► appset của project (wave 0)
+│                                   └─► workload Application (theo env của tier)
+└── shared-gateway (App)   ──► Gateway shared-gw                            (wave 1)
+```
+
+> ApplicationSet chỉ sinh được **Application**, nên "appset quản lý AppProject / quản lý appset con"
+> đều dùng App-of-Apps gián tiếp: appset → App → (AppProject | ApplicationSet) manifest.
+
+## Cấu trúc thư mục
 
 ```
 main
-├── root-application.yaml          # App-of-Apps gốc — apply tay 1 lần
+├── root-nonproduction.yaml          # apply lên ArgoCD cluster nonprod
+├── root-production.yaml             # apply lên ArgoCD cluster prod
 ├── bootstrap/
-│   ├── appprojects/               # AppProject: platform, birdnet-market, mention-mate
-│   ├── appsets/                   # ApplicationSet: platform, all-projects
-│   └── shared-gateway-app.yaml    # Application → Gateway dùng chung
-├── helm-charts/app/               # 1 base chart duy nhất, mọi app dùng chung
-├── platform/gateway/              # Gateway dùng chung (shared-gw)
-├── apps/                          # overlay env, gom theo project/app
-│   ├── birdnet-market/
-│   │   ├── frontend/overlays/{dev,staging,prod}/values.yaml
-│   │   └── backend/overlays/{dev,staging,prod}/values.yaml
-│   └── mention-mate/
-│       └── app/overlays/{dev,staging,prod}/values.yaml
-└── scripts/seal.sh                # bọc kubeseal
+│   ├── nonproduction/               # production/ = bản sao, chỉ khác env filter
+│   │   ├── appprojects.yaml          (appset)         ┐ 4 file cấp 1
+│   │   ├── platform.yaml             (appset)         │ (root đọc, recurse:false)
+│   │   ├── all-projects.yaml         (appset)         │
+│   │   ├── shared-gateway.yaml       (App)            ┘
+│   │   ├── appprojects/{platform,birdnet-market,mention-mate}/appproject.yaml
+│   │   └── project-appsets/{birdnet-market,mention-mate}/applicationset.yaml
+│   └── production/ ...
+├── platform/gateway/gateway.yaml    # Gateway dùng chung (mỗi cluster 1 cái)
+├── helm-charts/app/                 # 1 base chart duy nhất
+└── apps/<project>/<app>/overlays/<env>/values.yaml
 ```
 
-## Bootstrap (1 lệnh tay duy nhất)
+## Bootstrap
 
 ```bash
-kubectl apply -f root-application.yaml
+# trên ArgoCD của cluster nonprod
+kubectl apply -f root-nonproduction.yaml
+# trên ArgoCD của cluster prod
+kubectl apply -f root-production.yaml
 ```
 
-`root` → `bootstrap/` (recurse), theo sync-wave:
+| Project | Apps | nonprod (dev+staging) | prod |
+|---|---|---|---|
+| birdnet-market | frontend, backend | 4 | 2 |
+| mention-mate | app (backend+worker) | 2 | 1 |
 
-| Wave | Thành phần |
-|------|------------|
-| -2 | AppProjects |
-| -1 | appset `platform` → sealed-secrets, kgateway-crds, kgateway |
-| 0  | appset `all-projects` → quét `apps/*/*/overlays/*`, sinh 1 Application / (project, app, env) |
-| 1  | `shared-gateway` → Gateway `shared-gw` (kgateway-system) |
-
-## Apps (directory-based)
-
-`all-projects` dùng **git directories generator** quét `apps/<project>/<app>/overlays/<env>` trên `main`:
-
-- Application = `{project}-{app}-{env}`, namespace = `{project}-{env}`, AppProject = `{project}`
-- **Multi-source, cả hai cùng ở `main`** (cùng revision): `source[0]` = chart `helm-charts/app`, `source[1]` = `values.yaml` của env (`$values`)
-- Thêm env/app/project = tạo thêm thư mục, không cần đụng appset
-
-| Project | Apps | Application |
-|---|---|---|
-| birdnet-market | `frontend`, `backend` | 2 × 3 env = 6 |
-| mention-mate | `app` (backend + worker) | 1 × 3 env = 3 |
+→ **6 Application** trên cluster nonprod, **3** trên cluster prod. Application = `{project}-{app}-{env}`,
+namespace = `{project}-{env}`, AppProject = `{project}`.
 
 ## Base chart `app`
 
@@ -57,29 +66,32 @@ kubectl apply -f root-application.yaml
 
 - mỗi component → 1 **Deployment** (+ **Service** nếu có `port`, + **ConfigMap** nếu có `config`, + **HTTPRoute** nếu `httpRoute.enabled`)
 - 1 component = single-deployment; nhiều component = multi-deployment
-- **1 SealedSecret** dùng chung cho cả release (`envFrom` vào mọi component)
-- HTTPRoute gắn vào **Gateway dùng chung** `shared-gw` (kgateway-system)
+- **1 SealedSecret** dùng chung cho cả release; HTTPRoute gắn vào **Gateway dùng chung** `shared-gw`
 
+Mỗi workload Application multi-source, **cả hai cùng `main`**: `source[0]` = `helm-charts/app`, `source[1]` = `values.yaml` của env (`$values`).
 Cấu trúc `components` đầy đủ: xem `helm-charts/app/values.yaml`.
+
+## Thêm mới
+
+- **Thêm env**: tạo `apps/<project>/<app>/overlays/<env>/values.yaml` + thêm path env vào appset của project ở tier tương ứng.
+- **Thêm app**: tạo `apps/<project>/<newapp>/overlays/<env>/...` (appset của project tự quét).
+- **Thêm project**: thêm `apps/<newproject>/...`, `bootstrap/<tier>/appprojects/<newproject>/appproject.yaml`, `bootstrap/<tier>/project-appsets/<newproject>/applicationset.yaml` (appset cha tự quét).
 
 ## SealedSecret
 
-Repo test hiện đặt `sealedSecret.enabled: false` (dùng image `traefik/whoami`, không cần secret).
-Khi cần secret thật, bật lại và sinh ciphertext bằng kubeseal — scope `strict` gắn theo **name + namespace**,
-tên secret phải khớp `<release>-secret`:
+Repo test đặt `sealedSecret.enabled: false` (image `traefik/whoami`). Khi cần secret thật, bật lại và seal —
+scope `strict` gắn theo name+namespace, tên secret = `<release>-secret`:
 
 ```bash
-# release = {project}-{app}-{env} ; secret = <release>-secret ; ns = {project}-{env}
 ./scripts/seal.sh mention-mate-dev mention-mate-app-dev-secret DB_PASSWORD=... API_KEY=...
-# dán block encryptedData vào values.yaml của env đó.
 ```
 
-## Đăng ký repo cho ArgoCD
+## ArgoCD
 
-Repo này **public** → ArgoCD clone không cần creds. Chỉ cần OCI cho kgateway:
+Repo **public** → ArgoCD clone không cần creds. Mỗi cluster cần OCI cho kgateway:
 
 ```bash
 argocd repo add cr.kgateway.dev/kgateway-dev/charts --type helm --enable-oci
 ```
 
-repo-server cần egress tới GitHub, `cr.kgateway.dev`, `bitnami-labs.github.io`. ArgoCD **≥ 3.1** (native OCI Helm); lab pin **3.3.x**.
+ArgoCD **≥ 3.1** (native OCI Helm); lab pin **3.3.x**.

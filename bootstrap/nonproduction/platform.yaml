@@ -1,6 +1,4 @@
-# Platform ApplicationSet: sinh các Application thành phần nền tảng
-# (sealed-secrets, kgateway-crds, kgateway) từ 1 list generator.
-# Thay cho các file Application rời trước đây (sealed-secrets-app.yaml, kgateway-app.yaml).
+# Platform ApplicationSet: sinh Application cho sealed-secrets, kgateway-crds, kgateway.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -20,7 +18,6 @@ spec:
             version: 2.18.6
             namespace: kube-system
             wave: "-1"
-            # kubeseal CLI mặc định tìm controller tên 'sealed-secrets-controller'
             helmValues: |
               fullnameOverride: sealed-secrets-controller
           - name: kgateway-crds
@@ -43,9 +40,6 @@ spec:
       labels:
         platform-component: '{{.name}}'
       annotations:
-        # Ordering chỉ mang tính diễn đạt: Application do appset sinh tự sync & self-heal
-        # độc lập. CRDs (wave -1) nên sẵn sàng trước controller kgateway (wave 0);
-        # nếu sync lệch thứ tự, retry/self-heal của ArgoCD sẽ hội tụ.
         argocd.argoproj.io/sync-wave: '{{.wave}}'
     spec:
       project: platform
@@ -54,7 +48,6 @@ spec:
         chart: '{{.chart}}'
         targetRevision: '{{.version}}'
         helm:
-          # releaseName mặc định = tên Application ({{.name}})
           values: '{{.helmValues}}'
       destination:
         server: https://kubernetes.default.svc

@@ -1,16 +1,10 @@
-# Sinh 1 Application cho mỗi (project, app, env) — DIRECTORY-BASED, single branch (main).
-#   Cấu trúc: apps/<project>/<app>/overlays/<env>/values.yaml
-# 1 git directories generator quét trên main. Multi-source, CẢ HAI source CÙNG ở main
-# (chart + values cùng revision -> ArgoCD chấp nhận $values, không còn lỗi cross-revision):
-#   source[0] = base Helm chart helm-charts/app (main)
-#   source[1] = values theo env, cùng repo (main) -> $values
+# Per-project ApplicationSet (birdnet-market, tier=nonproduction): quét overlay env -> sinh workload Application.
+# Multi-source CÙNG main (chart + values cùng revision).
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: all-projects
+  name: birdnet-market
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
@@ -19,10 +13,10 @@ spec:
         repoURL: https://github.com/ongtungduong/gitops-training.git
         revision: main
         directories:
-          - path: "apps/*/*/overlays/*"
+          - path: "apps/birdnet-market/*/overlays/dev"
+          - path: "apps/birdnet-market/*/overlays/staging"
   template:
     metadata:
-      # segments: [apps, <project>, <app>, overlays, <env>] ; basename = <env>
       name: '{{ index .path.segments 1 }}-{{ index .path.segments 2 }}-{{ .path.basename }}'
       labels:
         project: '{{ index .path.segments 1 }}'
@@ -31,14 +25,12 @@ spec:
     spec:
       project: '{{ index .path.segments 1 }}'
       sources:
-        # base chart (main)
         - repoURL: https://github.com/ongtungduong/gitops-training.git
           targetRevision: main
           path: 'helm-charts/app'
           helm:
             valueFiles:
               - '$values/{{ .path.path }}/values.yaml'
-        # values theo env (cùng main) -> $values
         - repoURL: https://github.com/ongtungduong/gitops-training.git
           targetRevision: main
           ref: values

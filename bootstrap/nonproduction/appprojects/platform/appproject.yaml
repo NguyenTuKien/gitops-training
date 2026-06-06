@@ -3,14 +3,12 @@ kind: AppProject
 metadata:
   name: platform
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-2"
 spec:
-  description: Platform components (sealed-secrets, kgateway, ...)
+  description: Platform components (sealed-secrets, kgateway, shared gateway)
   sourceRepos:
     - https://bitnami-labs.github.io/sealed-secrets
     - cr.kgateway.dev/kgateway-dev/charts
-    - https://github.com/ongtungduong/gitops-training.git   # manifest shared Gateway
+    - https://github.com/ongtungduong/gitops-training.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kube-system

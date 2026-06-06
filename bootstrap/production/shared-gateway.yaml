@@ -1,25 +1,24 @@
-# App-of-Apps gốc. Apply TAY 1 lần duy nhất:
-#   kubectl apply -f root-application.yaml
-# Sau đó toàn bộ chain (AppProject, sealed-secrets, ApplicationSet) là GitOps.
+# Tạo Gateway dùng chung sau khi kgateway controller chạy (wave 1).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root
+  name: shared-gateway
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: default
+  project: platform
   source:
     repoURL: https://github.com/ongtungduong/gitops-training.git
     targetRevision: main
-    path: bootstrap
-    directory:
-      recurse: true            # quét cả bootstrap/appprojects/ và bootstrap/appsets/
+    path: platform/gateway
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: kgateway-system
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
