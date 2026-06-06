@@ -1,4 +1,6 @@
-# Platform ApplicationSet: sinh Application cho sealed-secrets, kgateway-crds, kgateway.
+# Platform ApplicationSet: sinh Application cho sealed-secrets + kgateway-crds.
+# kgateway controller tách riêng (kgateway.yaml) vì cài KHÔNG ServerSideApply
+# (pattern cài kgateway trên ArgoCD: CRDs dùng SSA, controller thì không).
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -23,16 +25,9 @@ spec:
           - name: kgateway-crds
             repoURL: cr.kgateway.dev/kgateway-dev/charts
             chart: kgateway-crds
-            version: v2.0.0
+            version: v2.4.0-main
             namespace: kgateway-system
             wave: "-1"
-            helmValues: ""
-          - name: kgateway
-            repoURL: cr.kgateway.dev/kgateway-dev/charts
-            chart: kgateway
-            version: v2.0.0
-            namespace: kgateway-system
-            wave: "0"
             helmValues: ""
   template:
     metadata:
@@ -48,6 +43,7 @@ spec:
         chart: '{{.chart}}'
         targetRevision: '{{.version}}'
         helm:
+          skipCrds: false
           values: '{{.helmValues}}'
       destination:
         server: https://kubernetes.default.svc

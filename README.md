@@ -12,14 +12,18 @@ Single branch (`main`), directory-based. Tách **2 tier theo cluster**:
 ## Phân tầng (mỗi tier)
 
 ```
-root-<tier> (App, recurse:false → chỉ đọc 5 file cấp 1 của bootstrap/<tier>)
+root-<tier> (App, recurse:false → chỉ đọc 6 file cấp 1 của bootstrap/<tier>)
 ├── appprojects    (appset) ──► App/appproject-<proj> ──► AppProject        (wave -2)
-├── platform       (appset) ──► sealed-secrets, kgateway-crds, kgateway     (wave -1)
+├── platform       (appset) ──► sealed-secrets + kgateway-crds (CRDs, có SSA) (wave -1)
+├── kgateway       (App)    ──► kgateway controller (v2.4.0-main, KHÔNG SSA)  (wave 0)
 ├── all-projects   (appset) ──► App/projectset-<proj> ──► appset của project (wave 0)
 │                                   └─► workload Application (theo env của tier)
 ├── shared-gateway (App)    ──► Gateway shared-gw (*.duongot.work, dùng chung) (wave 1)
 └── httproutes     (App)    ──► HTTPRoute đứng riêng (vd argocd) ──► shared-gw  (wave 2)
 ```
+
+> kgateway controller tách khỏi `platform` appset vì cài **KHÔNG ServerSideApply** (còn CRDs **có** SSA) —
+> đúng pattern cài kgateway trên ArgoCD; appset (template đồng nhất) không đặt syncOptions per-element được.
 
 > ApplicationSet chỉ sinh được **Application**, nên "appset quản lý AppProject / quản lý appset con"
 > đều dùng App-of-Apps gián tiếp: appset → App → (AppProject | ApplicationSet) manifest.
@@ -32,8 +36,9 @@ main
 ├── root-production.yaml             # apply lên ArgoCD cluster prod
 ├── bootstrap/
 │   ├── nonproduction/               # production/ = bản sao, chỉ khác env filter
-│   │   ├── appprojects.yaml          (appset)         ┐ 5 file cấp 1
+│   │   ├── appprojects.yaml          (appset)         ┐ 6 file cấp 1
 │   │   ├── platform.yaml             (appset)         │ (root đọc, recurse:false)
+│   │   ├── kgateway.yaml             (App)            │
 │   │   ├── all-projects.yaml         (appset)         │
 │   │   ├── shared-gateway.yaml       (App)            │
 │   │   ├── httproutes.yaml           (App)            ┘
