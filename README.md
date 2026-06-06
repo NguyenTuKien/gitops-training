@@ -38,7 +38,7 @@ main
 │   │   ├── appprojects/{platform,birdnet-market,mention-mate}/appproject.yaml
 │   │   └── project-appsets/{birdnet-market,mention-mate}/applicationset.yaml
 │   └── production/ ...
-├── platform/gateway/gateway.yaml    # Gateway dùng chung (mỗi cluster 1 cái)
+├── platform/gateway/               # GatewayParameters (NodePort) + Gateway shared-gw + HTTPRoute argocd
 ├── helm-charts/app/                 # 1 base chart duy nhất
 └── apps/<project>/<app>/overlays/<env>/values.yaml
 ```

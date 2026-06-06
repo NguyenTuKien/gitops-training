@@ -1,0 +1,12 @@
+# Tham số hạ tầng cho Gateway shared-gw: service kiểu NodePort (truy cập qua node IP:nodePort).
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayParameters
+metadata:
+  name: shared-gw-params
+  namespace: kgateway-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  kube:
+    service:
+      type: NodePort
