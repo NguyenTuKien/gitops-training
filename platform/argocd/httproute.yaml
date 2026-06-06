@@ -1,4 +1,4 @@
-# Expose ArgoCD UI qua Gateway dùng chung: argocd.duongot.work -> service argocd-server.
+# argocd.duongot.work -> argocd-server (qua argocd-gw).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -8,9 +8,10 @@ metadata:
     argocd.argoproj.io/sync-wave: "2"
 spec:
   parentRefs:
-    - name: shared-gw
+    - name: argocd-gw
       namespace: kgateway-system
-  hostnames: ["argocd.duongot.work"]
+  hostnames:
+    - argocd.duongot.work
   rules:
     - backendRefs:
         - name: argocd-server

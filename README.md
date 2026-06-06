@@ -12,12 +12,13 @@ Single branch (`main`), directory-based. Tách **2 tier theo cluster**:
 ## Phân tầng (mỗi tier)
 
 ```
-root-<tier> (App, recurse:false → chỉ đọc 4 file cấp 1 của bootstrap/<tier>)
-├── appprojects   (appset) ──► App/appproject-<proj> ──► AppProject        (wave -2)
-├── platform      (appset) ──► sealed-secrets, kgateway-crds, kgateway     (wave -1)
-├── all-projects  (appset) ──► App/projectset-<proj> ──► appset của project (wave 0)
+root-<tier> (App, recurse:false → chỉ đọc 5 file cấp 1 của bootstrap/<tier>)
+├── appprojects    (appset) ──► App/appproject-<proj> ──► AppProject        (wave -2)
+├── platform       (appset) ──► sealed-secrets, kgateway-crds, kgateway     (wave -1)
+├── all-projects   (appset) ──► App/projectset-<proj> ──► appset của project (wave 0)
 │                                   └─► workload Application (theo env của tier)
-└── shared-gateway (App)   ──► Gateway shared-gw                            (wave 1)
+├── shared-gateway (App)    ──► Gateway shared-gw (apps, *.duongot.work)     (wave 1)
+└── argocd-expose  (App)    ──► server.insecure + argocd-gw + route argocd  (wave 1)
 ```
 
 > ApplicationSet chỉ sinh được **Application**, nên "appset quản lý AppProject / quản lý appset con"
@@ -31,14 +32,16 @@ main
 ├── root-production.yaml             # apply lên ArgoCD cluster prod
 ├── bootstrap/
 │   ├── nonproduction/               # production/ = bản sao, chỉ khác env filter
-│   │   ├── appprojects.yaml          (appset)         ┐ 4 file cấp 1
+│   │   ├── appprojects.yaml          (appset)         ┐ 5 file cấp 1
 │   │   ├── platform.yaml             (appset)         │ (root đọc, recurse:false)
 │   │   ├── all-projects.yaml         (appset)         │
-│   │   ├── shared-gateway.yaml       (App)            ┘
+│   │   ├── shared-gateway.yaml       (App)            │
+│   │   ├── argocd-expose.yaml        (App)            ┘
 │   │   ├── appprojects/{platform,birdnet-market,mention-mate}/appproject.yaml
 │   │   └── project-appsets/{birdnet-market,mention-mate}/applicationset.yaml
 │   └── production/ ...
-├── platform/gateway/               # GatewayParameters (NodePort) + Gateway shared-gw + HTTPRoute argocd
+├── platform/gateway/               # shared-gw (apps): GatewayParameters + Gateway *.duongot.work
+├── platform/argocd/                # argocd-gw + HTTPRoute argocd.duongot.work + server.insecure
 ├── helm-charts/app/                 # 1 base chart duy nhất
 └── apps/<project>/<app>/overlays/<env>/values.yaml
 ```
@@ -95,3 +98,14 @@ argocd repo add cr.kgateway.dev/kgateway-dev/charts --type helm --enable-oci
 ```
 
 ArgoCD **≥ 3.1** (native OCI Helm); lab pin **3.3.x**.
+
+### Phơi bày ArgoCD UI (argocd-expose)
+
+`bootstrap/<tier>/argocd-expose.yaml` GitOps hoá `platform/argocd/`: bật `server.insecure`, tạo
+`argocd-gw` (NodePort) + HTTPRoute `argocd.duongot.work` → `argocd-server`. Dùng gateway RIÊNG,
+tách khỏi `shared-gw` của app.
+
+- **Lưu ý:** `argocd-server` đọc `server.insecure` lúc khởi động → cần **restart 1 lần** để có hiệu lực
+  (`kubectl -n argocd rollout restart deploy argocd-server`), hoặc cài ArgoCD sẵn với `--insecure`.
+  GitOps không tự restart pod đọc config lúc start.
+- Lấy NodePort: `kubectl -n kgateway-system get svc -l gateway.networking.k8s.io/gateway-name=argocd-gw -o jsonpath='{.items[0].spec.ports[?(@.port==80)].nodePort}'`, rồi map DNS `argocd.duongot.work` → `nodeIP:nodePort`.

@@ -1,0 +1,25 @@
+# Phơi bày ArgoCD UI qua gateway riêng (argocd-gw) + bật server.insecure. ServerSideApply
+# để merge an toàn vào argocd-cmd-params-cm (không clobber key khác).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-expose
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/ongtungduong/gitops-training.git
+    targetRevision: main
+    path: platform/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
