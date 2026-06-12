@@ -10,11 +10,12 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
-        repoURL: https://github.com/ongtungduong/gitops-training.git
+        repoURL: https://github.com/NguyenTuKien/gitops-training.git
         revision: main
         directories:
           - path: "apps/birdnet-market/*/overlays/dev"
           - path: "apps/birdnet-market/*/overlays/staging"
+          - path: "apps/birdnet-market/*/overlays/uat"
   template:
     metadata:
       name: '{{ index .path.segments 1 }}-{{ index .path.segments 2 }}-{{ .path.basename }}'
@@ -25,13 +26,13 @@ spec:
     spec:
       project: '{{ index .path.segments 1 }}'
       sources:
-        - repoURL: https://github.com/ongtungduong/gitops-training.git
+        - repoURL: https://github.com/NguyenTuKien/gitops-training.git
           targetRevision: main
           path: 'helm-charts/app'
           helm:
             valueFiles:
               - '$values/{{ .path.path }}/values.yaml'
-        - repoURL: https://github.com/ongtungduong/gitops-training.git
+        - repoURL: https://github.com/NguyenTuKien/gitops-training.git
           targetRevision: main
           ref: values
       destination:
