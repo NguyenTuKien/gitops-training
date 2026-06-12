@@ -1,0 +1,22 @@
+# birdnet-market-pipeline — staging | pipeline xử lý dữ liệu (ingestion + processor)
+components:
+  ingestion:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 2
+    port: 80
+    httpRoute:
+      enabled: false
+    env:
+      PIPELINE_ENV: staging
+      BATCH_SIZE: "500"
+  processor:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 2
+    env:
+      PIPELINE_ENV: staging
+sealedSecret:
+  enabled: false

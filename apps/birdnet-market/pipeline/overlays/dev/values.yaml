@@ -1,0 +1,22 @@
+# birdnet-market-pipeline — dev | pipeline xử lý dữ liệu (ingestion + processor)
+components:
+  ingestion:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 1
+    port: 80
+    httpRoute:
+      enabled: false
+    env:
+      PIPELINE_ENV: dev
+      BATCH_SIZE: "100"
+  processor:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 1
+    env:
+      PIPELINE_ENV: dev
+sealedSecret:
+  enabled: false
