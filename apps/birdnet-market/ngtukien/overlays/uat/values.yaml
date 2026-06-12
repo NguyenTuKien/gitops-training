@@ -1,0 +1,14 @@
+# birdnet-market-ngtukien — uat | image test nhẹ: traefik/whoami
+components:
+  app:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 2
+    port: 80
+    httpRoute:
+      enabled: true
+      hostnames: ["birdnet-market-ngtukien-uat.duongot.work"]
+      pathPrefixes: ["/"]
+sealedSecret:
+  enabled: false
