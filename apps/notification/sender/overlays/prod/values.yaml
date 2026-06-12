@@ -1,0 +1,15 @@
+# notification-sender — prod
+components:
+  sender:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 3
+    port: 80
+    httpRoute:
+      enabled: false
+    env:
+      NOTIFICATION_ENV: prod
+      BATCH_SIZE: "500"
+sealedSecret:
+  enabled: false

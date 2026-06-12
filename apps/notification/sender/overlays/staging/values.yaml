@@ -1,0 +1,15 @@
+# notification-sender — staging
+components:
+  sender:
+    image:
+      repository: traefik/whoami
+      tag: "v1.10.3"
+    replicaCount: 2
+    port: 80
+    httpRoute:
+      enabled: false
+    env:
+      NOTIFICATION_ENV: staging
+      BATCH_SIZE: "100"
+sealedSecret:
+  enabled: false
